@@ -1,1 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cronograma de Actividades 2026</title>
+    <style>
+        /* Reseteo básico */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0a0a0a; /* Fondo principal casi negro */
+            color: #f3e5f5; /* Texto general en lila muy claro */
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Contenedor principal */
+        .app-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Tarjeta principal del calendario (Estilo 2D Oscuro) */
+        .calendar-card {
+            flex: 1;
+            background-color: #140a21; /* Fondo morado muy oscuro / negro nazareno */
+            border: 2px solid #381a59; /* Borde morado oscuro */
+            border-radius: 0px; 
+            display: flex;
+            flex-direction: column;
+            padding: 20px 30px;
+        }
+
+        /* Cabecera */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #fbc02d; /* Línea dorada tradicional */
+            padding-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #fbc02d; /* Título en dorado para contrastar con el fondo oscuro */
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: #ce93d8; /* Mes y año en lila para diferenciar jerarquía */
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Cuadrícula de días */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            flex: 1;
+            margin-top: 10px;
+        }
+
+        /* Cabeceras de la semana */
+        .weekday {
+            font-weight: 700;
+            color: #ce93d8; /* Lila brillante */
+            text-align: center;
+            font-size: 1rem;
+            text-transform: uppercase;
+            padding-bottom: 10px;
+        }
+
+        /* Contenedor de cada día */
+        .day {
+            background-color: #1e122e; /* Fondo de celda morado oscuro */
+            border: 1px solid #381a59; /* Borde sutil */
+            display: flex;
+            flex-direction: column;
+            padding: 8px;
+            min-height: 120px;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+
+        /* Efecto al escribir (Dorado) */
+        .day:not(.empty):focus-within {
+            border-color: #fbc02d; /* Borde dorado al seleccionar */
+            background-color: #26163b; /* Aclara un poco la celda al escribir */
+        }
+
+        .day.empty {
+            background-color: transparent;
+            border: none;
+        }
+
+        /* Número del día */
+        .day-number {
+            align-self: flex-end;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #ce93d8; /* Lila para los números */
+            margin-bottom: 5px;
+        }
+
+        /* Área de texto para las notas */
+        .day-note {
+            flex: 1;
+            width: 100%;
+            background: transparent;
+            border: none;
+            resize: none;
+            font-family: inherit;
+            font-size: 0.95rem;
+            color: #f3e5f5; /* Texto claro al escribir */
+            outline: none;
+            line-height: 1.4;
+        }
+
+        .day-note::placeholder {
+            color: #593c75; /* Morado apagado para el placeholder */
+        }
+
+        /* Botones de control */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0 0 0;
+            margin-top: 10px;
+        }
+
+        button {
+            background-color: #4a148c; /* Fondo morado intenso */
+            color: #fbc02d; /* Texto dorado */
+            border: 2px solid #4a148c;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #fbc02d; /* Cambia a fondo dorado */
+            border-color: #fbc02d;
+            color: #0a0a0a; /* Texto negro al pasar el ratón */
+        }
+
+        button:disabled {
+            background-color: #2a1b3d;
+            border-color: #2a1b3d;
+            color: #593c75;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="calendar-card">
+            <div class="header">
+                <h1>Cronograma de Actividades</h1>
+                <h2 id="month-title">Mes 2026</h2>
+            </div>
+            
+            <div class="grid" id="days-grid">
+                <!-- Se inyecta dinámicamente -->
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="btn-prev">Anterior</button>
+            <button id="btn-next">Siguiente</button>
+        </div>
+    </div>
+
+    <script>
+        const year = 2026;
+        const monthNames = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ];
+        const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+        
+        let currentMonth = 0;
+
+        const monthTitle = document.getElementById('month-title');
+        const daysGrid = document.getElementById('days-grid');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+
+        function renderCalendar(monthIndex) {
+            monthTitle.textContent = `${monthNames[monthIndex]} ${year}`;
+            daysGrid.innerHTML = '';
+
+            dayNames.forEach(day => {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'weekday';
+                dayDiv.textContent = day;
+                daysGrid.appendChild(dayDiv);
+            });
+
+            const firstDay = new Date(year, monthIndex, 1).getDay();
+            const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'day empty';
+                daysGrid.appendChild(emptyDiv);
+            }
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'day';
+
+                const numSpan = document.createElement('span');
+                numSpan.className = 'day-number';
+                numSpan.textContent = i;
+
+                const textArea = document.createElement('textarea');
+                textArea.className = 'day-note';
+                textArea.placeholder = 'Escribir...';
+
+                // Usamos localStorage para que las notas no se borren
+                const storageKey = `nota-dark-2026-${monthIndex}-${i}`;
+                textArea.value = localStorage.getItem(storageKey) || '';
+
+                textArea.addEventListener('input', (e) => {
+                    localStorage.setItem(storageKey, e.target.value);
+                });
+
+                dayDiv.appendChild(numSpan);
+                dayDiv.appendChild(textArea);
+                daysGrid.appendChild(dayDiv);
+            }
+
+            btnPrev.disabled = currentMonth === 0;
+            btnNext.disabled = currentMonth === 11;
+        }
+
+        btnNext.addEventListener('click', () => {
+            if (currentMonth < 11) {
+                currentMonth++;
+                renderCalendar(currentMonth);
+            }
+        });
+
+        btnPrev.addEventListener('click', () => {
+            if (currentMonth > 0) {
+                currentMonth--;
+                renderCalendar(currentMonth);
+            }
+        });
+
+        renderCalendar(currentMonth);
+    </script>
+</body>
+</html>
