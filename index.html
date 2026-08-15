@@ -116,7 +116,7 @@
             resize: none;
             font-family: inherit;
             font-size: 0.95rem;
-            color: #fbc02d; /* Texto en dorado para diferenciar lo que viene del Excel */
+            color: #fbc02d; 
             outline: none;
             line-height: 1.4;
         }
@@ -193,24 +193,37 @@
         const btnPrev = document.getElementById('btn-prev');
         const btnNext = document.getElementById('btn-next');
 
-        // Aquí está tu enlace oficial de Google Sheets
         const urlGoogleSheet = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRYzNtjM5TOM0X2fAUK_AQRmJlFwLzkXMYMlTAnBvTdrscNeVh0dBICOTISw12ARg/pub?output=csv'; 
 
         async function cargarDatosDeExcel() {
             try {
+                console.log("1. Intentando conectar con Google Sheets...");
                 const respuesta = await fetch(urlGoogleSheet);
+
+                if (!respuesta.ok) {
+                    throw new Error(`Error de red: ${respuesta.status}`);
+                }
+
                 const datosCsv = await respuesta.text();
-                
-                const filas = datosCsv.split('\n').slice(1); 
+                console.log("2. Datos crudos recibidos:", datosCsv); 
+
+                const filas = datosCsv.split(/\r?\n/).slice(1); 
                 
                 filas.forEach(fila => {
-                    const columnas = fila.split(',');
-                    if (columnas.length >= 2) {
-                        const fecha = columnas[0].trim();
-                        const texto = columnas.slice(1).join(',').trim(); 
+                    if (!fila.trim()) return; 
+
+                    const indiceComa = fila.indexOf(',');
+                    if (indiceComa > -1) {
+                        const fecha = fila.substring(0, indiceComa).trim();
+                        let texto = fila.substring(indiceComa + 1).trim(); 
+                        
+                        if (texto.startsWith('"') && texto.endsWith('"')) {
+                            texto = texto.substring(1, texto.length - 1);
+                        }
                         
                         if (fecha !== '') {
                             excelData[fecha] = texto;
+                            console.log(`3. Día interpretado: ${fecha} -> ${texto}`);
                         }
                     }
                 });
@@ -218,7 +231,8 @@
                 renderCalendar(currentMonth);
 
             } catch (error) {
-                console.error("Error al cargar el Excel.", error);
+                console.error("Fallo al cargar el Excel:", error);
+                alert("Fallo la conexión con Excel. Revisa la Consola (F12).");
                 renderCalendar(currentMonth); 
             }
         }
@@ -255,18 +269,15 @@
                 textArea.className = 'day-note';
                 textArea.placeholder = 'Escribir...';
 
-                // Clave de formato YYYY-MM-DD para cruzar con el Excel
                 const mesFormateado = String(monthIndex + 1).padStart(2, '0');
                 const diaFormateado = String(i).padStart(2, '0');
                 const fechaKey = `${year}-${mesFormateado}-${diaFormateado}`;
 
                 const storageKey = `nota-dark-2026-${monthIndex}-${i}`;
                 
-                // Si el Excel tiene datos para este día, muéstralo
                 if (excelData[fechaKey]) {
                     textArea.value = excelData[fechaKey];
                 } else {
-                    // Si no, muestra lo que el usuario haya escrito manualmente
                     textArea.value = localStorage.getItem(storageKey) || '';
                 }
 
