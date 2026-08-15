@@ -188,12 +188,13 @@
         let currentMonth = 0;
         let excelData = {}; 
 
+        // Tu enlace de Google Sheets
+        const urlGoogleSheet = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRYzNtjM5TOM0X2fAUK_AQRmJlFwLzkXMYMlTAnBvTdrscNeVh0dBICOTISw12ARg/pub?output=csv'; 
+
         const monthTitle = document.getElementById('month-title');
         const daysGrid = document.getElementById('days-grid');
         const btnPrev = document.getElementById('btn-prev');
         const btnNext = document.getElementById('btn-next');
-
-        const urlGoogleSheet = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRYzNtjM5TOM0X2fAUK_AQRmJlFwLzkXMYMlTAnBvTdrscNeVh0dBICOTISw12ARg/pub?output=csv'; 
 
         async function cargarDatosDeExcel() {
             try {
@@ -205,8 +206,6 @@
                 }
 
                 const datosCsv = await respuesta.text();
-                console.log("2. Datos crudos recibidos:", datosCsv); 
-
                 const filas = datosCsv.split(/\r?\n/).slice(1); 
                 
                 filas.forEach(fila => {
@@ -214,16 +213,29 @@
 
                     const indiceComa = fila.indexOf(',');
                     if (indiceComa > -1) {
-                        const fecha = fila.substring(0, indiceComa).trim();
+                        let fechaCruda = fila.substring(0, indiceComa).trim();
                         let texto = fila.substring(indiceComa + 1).trim(); 
                         
+                        // Limpiar comillas si vienen del Excel
                         if (texto.startsWith('"') && texto.endsWith('"')) {
                             texto = texto.substring(1, texto.length - 1);
                         }
                         
-                        if (fecha !== '') {
-                            excelData[fecha] = texto;
-                            console.log(`3. Día interpretado: ${fecha} -> ${texto}`);
+                        let fechaLista = fechaCruda;
+
+                        // NUEVO: Traductor automático de fechas (Convierte DD/MM/YYYY a YYYY-MM-DD)
+                        if (fechaCruda.includes('/')) {
+                            const partes = fechaCruda.split('/');
+                            if (partes.length === 3) {
+                                const dia = partes[0].padStart(2, '0');
+                                const mes = partes[1].padStart(2, '0');
+                                const anio = partes[2];
+                                fechaLista = `${anio}-${mes}-${dia}`;
+                            }
+                        }
+                        
+                        if (fechaLista !== '') {
+                            excelData[fechaLista] = texto;
                         }
                     }
                 });
@@ -232,7 +244,6 @@
 
             } catch (error) {
                 console.error("Fallo al cargar el Excel:", error);
-                alert("Fallo la conexión con Excel. Revisa la Consola (F12).");
                 renderCalendar(currentMonth); 
             }
         }
@@ -269,12 +280,14 @@
                 textArea.className = 'day-note';
                 textArea.placeholder = 'Escribir...';
 
+                // Clave YYYY-MM-DD para buscar en nuestra data
                 const mesFormateado = String(monthIndex + 1).padStart(2, '0');
                 const diaFormateado = String(i).padStart(2, '0');
                 const fechaKey = `${year}-${mesFormateado}-${diaFormateado}`;
 
                 const storageKey = `nota-dark-2026-${monthIndex}-${i}`;
                 
+                // Si el Excel tiene datos para este día, muéstralo
                 if (excelData[fechaKey]) {
                     textArea.value = excelData[fechaKey];
                 } else {
@@ -308,6 +321,7 @@
             }
         });
 
+        // Arrancamos la aplicación leyendo el Excel primero
         cargarDatosDeExcel();
     </script>
 </body>
