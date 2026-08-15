@@ -14,14 +14,13 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #0a0a0a; /* Fondo principal casi negro */
-            color: #f3e5f5; /* Texto general en lila muy claro */
+            background-color: #0a0a0a;
+            color: #f3e5f5;
             height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
-        /* Contenedor principal */
         .app-container {
             flex: 1;
             display: flex;
@@ -32,28 +31,26 @@
             padding: 20px;
         }
 
-        /* Tarjeta principal del calendario (Estilo 2D Oscuro) */
         .calendar-card {
             flex: 1;
-            background-color: #140a21; /* Fondo morado muy oscuro / negro nazareno */
-            border: 2px solid #381a59; /* Borde morado oscuro */
+            background-color: #140a21;
+            border: 2px solid #381a59;
             border-radius: 0px; 
             display: flex;
             flex-direction: column;
             padding: 20px 30px;
         }
 
-        /* Cabecera */
         .header {
             text-align: center;
             margin-bottom: 20px;
-            border-bottom: 2px solid #fbc02d; /* Línea dorada tradicional */
+            border-bottom: 2px solid #fbc02d;
             padding-bottom: 15px;
         }
 
         h1 {
             font-size: 2.5rem;
-            color: #fbc02d; /* Título en dorado para contrastar con el fondo oscuro */
+            color: #fbc02d;
             text-transform: uppercase;
             letter-spacing: 3px;
             margin-bottom: 10px;
@@ -61,12 +58,11 @@
 
         h2 {
             font-size: 1.5rem;
-            color: #ce93d8; /* Mes y año en lila para diferenciar jerarquía */
+            color: #ce93d8;
             text-transform: uppercase;
             letter-spacing: 2px;
         }
 
-        /* Cuadrícula de días */
         .grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -75,20 +71,18 @@
             margin-top: 10px;
         }
 
-        /* Cabeceras de la semana */
         .weekday {
             font-weight: 700;
-            color: #ce93d8; /* Lila brillante */
+            color: #ce93d8;
             text-align: center;
             font-size: 1rem;
             text-transform: uppercase;
             padding-bottom: 10px;
         }
 
-        /* Contenedor de cada día */
         .day {
-            background-color: #1e122e; /* Fondo de celda morado oscuro */
-            border: 1px solid #381a59; /* Borde sutil */
+            background-color: #1e122e;
+            border: 1px solid #381a59;
             display: flex;
             flex-direction: column;
             padding: 8px;
@@ -96,10 +90,9 @@
             transition: border-color 0.2s ease, background-color 0.2s ease;
         }
 
-        /* Efecto al escribir (Dorado) */
         .day:not(.empty):focus-within {
-            border-color: #fbc02d; /* Borde dorado al seleccionar */
-            background-color: #26163b; /* Aclara un poco la celda al escribir */
+            border-color: #fbc02d;
+            background-color: #26163b;
         }
 
         .day.empty {
@@ -107,16 +100,14 @@
             border: none;
         }
 
-        /* Número del día */
         .day-number {
             align-self: flex-end;
             font-size: 1.1rem;
             font-weight: bold;
-            color: #ce93d8; /* Lila para los números */
+            color: #ce93d8;
             margin-bottom: 5px;
         }
 
-        /* Área de texto para las notas */
         .day-note {
             flex: 1;
             width: 100%;
@@ -125,16 +116,15 @@
             resize: none;
             font-family: inherit;
             font-size: 0.95rem;
-            color: #f3e5f5; /* Texto claro al escribir */
+            color: #fbc02d; /* Texto en dorado para diferenciar lo que viene del Excel */
             outline: none;
             line-height: 1.4;
         }
 
         .day-note::placeholder {
-            color: #593c75; /* Morado apagado para el placeholder */
+            color: #593c75;
         }
 
-        /* Botones de control */
         .controls {
             display: flex;
             justify-content: space-between;
@@ -144,8 +134,8 @@
         }
 
         button {
-            background-color: #4a148c; /* Fondo morado intenso */
-            color: #fbc02d; /* Texto dorado */
+            background-color: #4a148c;
+            color: #fbc02d;
             border: 2px solid #4a148c;
             padding: 12px 30px;
             font-size: 1.1rem;
@@ -156,9 +146,9 @@
         }
 
         button:hover:not(:disabled) {
-            background-color: #fbc02d; /* Cambia a fondo dorado */
+            background-color: #fbc02d;
             border-color: #fbc02d;
-            color: #0a0a0a; /* Texto negro al pasar el ratón */
+            color: #0a0a0a;
         }
 
         button:disabled {
@@ -178,9 +168,7 @@
                 <h2 id="month-title">Mes 2026</h2>
             </div>
             
-            <div class="grid" id="days-grid">
-                <!-- Se inyecta dinámicamente -->
-            </div>
+            <div class="grid" id="days-grid"></div>
         </div>
 
         <div class="controls">
@@ -198,11 +186,42 @@
         const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
         
         let currentMonth = 0;
+        let excelData = {}; 
 
         const monthTitle = document.getElementById('month-title');
         const daysGrid = document.getElementById('days-grid');
         const btnPrev = document.getElementById('btn-prev');
         const btnNext = document.getElementById('btn-next');
+
+        // Aquí está tu enlace oficial de Google Sheets
+        const urlGoogleSheet = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRYzNtjM5TOM0X2fAUK_AQRmJlFwLzkXMYMlTAnBvTdrscNeVh0dBICOTISw12ARg/pub?output=csv'; 
+
+        async function cargarDatosDeExcel() {
+            try {
+                const respuesta = await fetch(urlGoogleSheet);
+                const datosCsv = await respuesta.text();
+                
+                const filas = datosCsv.split('\n').slice(1); 
+                
+                filas.forEach(fila => {
+                    const columnas = fila.split(',');
+                    if (columnas.length >= 2) {
+                        const fecha = columnas[0].trim();
+                        const texto = columnas.slice(1).join(',').trim(); 
+                        
+                        if (fecha !== '') {
+                            excelData[fecha] = texto;
+                        }
+                    }
+                });
+                
+                renderCalendar(currentMonth);
+
+            } catch (error) {
+                console.error("Error al cargar el Excel.", error);
+                renderCalendar(currentMonth); 
+            }
+        }
 
         function renderCalendar(monthIndex) {
             monthTitle.textContent = `${monthNames[monthIndex]} ${year}`;
@@ -236,9 +255,20 @@
                 textArea.className = 'day-note';
                 textArea.placeholder = 'Escribir...';
 
-                // Usamos localStorage para que las notas no se borren
+                // Clave de formato YYYY-MM-DD para cruzar con el Excel
+                const mesFormateado = String(monthIndex + 1).padStart(2, '0');
+                const diaFormateado = String(i).padStart(2, '0');
+                const fechaKey = `${year}-${mesFormateado}-${diaFormateado}`;
+
                 const storageKey = `nota-dark-2026-${monthIndex}-${i}`;
-                textArea.value = localStorage.getItem(storageKey) || '';
+                
+                // Si el Excel tiene datos para este día, muéstralo
+                if (excelData[fechaKey]) {
+                    textArea.value = excelData[fechaKey];
+                } else {
+                    // Si no, muestra lo que el usuario haya escrito manualmente
+                    textArea.value = localStorage.getItem(storageKey) || '';
+                }
 
                 textArea.addEventListener('input', (e) => {
                     localStorage.setItem(storageKey, e.target.value);
@@ -267,7 +297,7 @@
             }
         });
 
-        renderCalendar(currentMonth);
+        cargarDatosDeExcel();
     </script>
 </body>
 </html>
