@@ -19,7 +19,7 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Evita que la pantalla entera haga scroll */
+            overflow: hidden; 
         }
 
         .app-container {
@@ -27,9 +27,9 @@
             display: flex;
             flex-direction: column;
             width: 100%;
-            max-width: 100%; /* Antes estaba en 1400px. Ahora toma TODO el ancho */
+            max-width: 100%; 
             margin: 0 auto;
-            padding: 15px 25px; /* Reducimos padding para aprovechar más espacio */
+            padding: 15px 25px; 
         }
 
         .calendar-card {
@@ -40,7 +40,7 @@
             display: flex;
             flex-direction: column;
             padding: 15px 20px;
-            min-height: 0; /* Permite que el contenedor se adapte sin desbordar */
+            min-height: 0; 
         }
 
         .header {
@@ -68,11 +68,11 @@
         .grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            grid-auto-rows: 1fr; /* Hace que todas las semanas midan exactamente lo mismo y llenen el alto disponible */
+            grid-auto-rows: 1fr; 
             gap: 10px;
             flex: 1;
             margin-top: 10px;
-            min-height: 0; /* Vital para que funcione flexbox hacia abajo */
+            min-height: 0; 
         }
 
         .weekday {
@@ -93,7 +93,7 @@
             display: flex;
             flex-direction: column;
             padding: 8px;
-            min-height: 0; /* Quitado el límite mínimo para que se adapte a cualquier monitor */
+            min-height: 0; 
             height: 100%;
             transition: border-color 0.2s ease, background-color 0.2s ease;
         }
@@ -123,31 +123,29 @@
             border: none;
             resize: none;
             font-family: inherit;
-            font-size: 0.82rem; 
+            font-size: 0.80rem; 
             color: #fbc02d; 
             outline: none;
-            line-height: 1.25; 
+            line-height: 1.35; /* Un poco más de espacio entre líneas para las listas */
             padding-right: 5px; 
+            font-weight: 500;
         }
 
         .day-note::placeholder {
             color: #593c75;
+            font-weight: normal;
         }
 
-        /* Barras de scroll elegantes */
         .day-note::-webkit-scrollbar {
             width: 6px; 
         }
-        
         .day-note::-webkit-scrollbar-track {
             background: transparent; 
         }
-        
         .day-note::-webkit-scrollbar-thumb {
             background-color: #381a59; 
             border-radius: 10px; 
         }
-        
         .day-note::-webkit-scrollbar-thumb:hover {
             background-color: #ce93d8; 
         }
@@ -221,6 +219,42 @@
         const btnPrev = document.getElementById('btn-prev');
         const btnNext = document.getElementById('btn-next');
 
+        // Lector avanzado que entiende saltos de línea y celdas complejas
+        function parsearCSVCompleto(texto) {
+            let resultado = [];
+            let filaActual = [];
+            let valorActual = '';
+            let entreComillas = false;
+
+            for (let i = 0; i < texto.length; i++) {
+                let char = texto[i];
+                let sigChar = texto[i + 1];
+
+                if (char === '"' && entreComillas && sigChar === '"') {
+                    valorActual += '"';
+                    i++; 
+                } else if (char === '"') {
+                    entreComillas = !entreComillas;
+                } else if (char === ',' && !entreComillas) {
+                    filaActual.push(valorActual);
+                    valorActual = '';
+                } else if ((char === '\n' || (char === '\r' && sigChar === '\n')) && !entreComillas) {
+                    filaActual.push(valorActual);
+                    resultado.push(filaActual);
+                    filaActual = [];
+                    valorActual = '';
+                    if (char === '\r') i++;
+                } else {
+                    valorActual += char;
+                }
+            }
+            if (valorActual !== '' || filaActual.length > 0) {
+                filaActual.push(valorActual);
+                resultado.push(filaActual);
+            }
+            return resultado;
+        }
+
         async function cargarDatosDeExcel() {
             try {
                 const respuesta = await fetch(urlGoogleSheet);
@@ -230,20 +264,31 @@
                 }
 
                 const datosCsv = await respuesta.text();
-                const filas = datosCsv.split(/\r?\n/).slice(1); 
+                const filas = parsearCSVCompleto(datosCsv).slice(1); 
                 
-                filas.forEach(fila => {
-                    if (!fila.trim()) return; 
-
-                    const indiceComa = fila.indexOf(',');
-                    if (indiceComa > -1) {
-                        let fechaCruda = fila.substring(0, indiceComa).trim();
-                        let texto = fila.substring(indiceComa + 1).trim(); 
+                filas.forEach(columnas => {
+                    if (columnas.length >= 2) {
+                        let fechaCruda = columnas[0].trim();
+                        let textoCrudo = columnas[1].trim(); 
+                        let color = columnas[2] ? columnas[2].trim() : ""; 
                         
-                        if (texto.startsWith('"') && texto.endsWith('"')) {
-                            texto = texto.substring(1, texto.length - 1);
+                        // Si el texto trae comillas extrañas al inicio y final por el CSV, las quitamos
+                        if (textoCrudo.startsWith('"') && textoCrudo.endsWith('"')) {
+                            textoCrudo = textoCrudo.substring(1, textoCrudo.length - 1);
                         }
                         
+                        // MAGIA DE FORMATO: Separador de actividades
+                        // Reemplaza 3 o más espacios seguidos por un salto de línea real
+                        let textoLimpio = textoCrudo.replace(/\s{3,}/g, '\n');
+                        
+                        // Convierte todo en una lista con viñetas
+                        let actividades = textoLimpio.split('\n');
+                        let textoFinal = actividades
+                            .map(act => act.trim())
+                            .filter(act => act.length > 0)
+                            .map(act => '• ' + act)
+                            .join('\n'); // Une cada actividad con un salto de renglón
+
                         let fechaLista = fechaCruda;
 
                         if (fechaCruda.includes('/')) {
@@ -257,7 +302,7 @@
                         }
                         
                         if (fechaLista !== '') {
-                            excelData[fechaLista] = texto;
+                            excelData[fechaLista] = { texto: textoFinal, color: color };
                         }
                     }
                 });
@@ -274,7 +319,6 @@
             monthTitle.textContent = `${monthNames[monthIndex]} ${year}`;
             daysGrid.innerHTML = '';
 
-            // Renderizar nombres de los días y empaquetarlos en otra capa CSS para cuadrar exacto
             dayNames.forEach(day => {
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'weekday';
@@ -310,9 +354,20 @@
                 const storageKey = `nota-dark-2026-${monthIndex}-${i}`;
                 
                 if (excelData[fechaKey]) {
-                    textArea.value = excelData[fechaKey];
+                    textArea.value = excelData[fechaKey].texto;
+                    
+                    let colorAsignado = excelData[fechaKey].color.toLowerCase();
+                    if (colorAsignado === 'rojo' || colorAsignado === 'red') {
+                        textArea.style.color = '#ff4d4d'; 
+                    } else if (colorAsignado !== '') {
+                        textArea.style.color = colorAsignado; 
+                    } else {
+                        textArea.style.color = '#fbc02d'; 
+                    }
+
                 } else {
                     textArea.value = localStorage.getItem(storageKey) || '';
+                    textArea.style.color = '#fbc02d'; 
                 }
 
                 textArea.addEventListener('input', (e) => {
